@@ -172,7 +172,7 @@ int is_square_threatened(chessboard* board_to_check, int square_pos, int threate
 int in_check(chessboard* board_to_check, int white_in_check) {
 	int king_pos;
 	for (king_pos=0; king_pos<65; king_pos++) {
-		if (board_to_check->board_array[king_pos] == (board_to_check->white_to_move ? 'k' : 'K') || board_to_check->board_array[king_pos] == (board_to_check->white_to_move ? 'l' : 'L')) {
+		if (board_to_check->board_array[king_pos] == (white_in_check ? 'K' : 'k') || board_to_check->board_array[king_pos] == (white_in_check ? 'L' : 'l')) {
 			break;
 		}
 	}
@@ -815,7 +815,7 @@ int main() {
 	chessboard initial_board;
 	initial_board.white_to_move = 1;
 	char initial_setup[65];
-	init_test_pos(initial_setup);
+	init_first_pos(initial_setup);
 	initial_board.board_array = initial_setup;
 	initial_board.num_moves = 0;
 	chessboard* all_moves[120];
@@ -823,14 +823,13 @@ int main() {
 	print_board(&initial_board);
 	fill_all_moves(&initial_board);
 
-			print_all_boards(&initial_board);
-	
+//	print_all_boards(&initial_board);
 	
 	chessboard* current_board = &initial_board;
-//	char move[7];
+	char move[7];
 	
 	
-	/*while (current_board->num_moves) {
+	while (current_board->num_moves) {
 		fgets(move,7,stdin);
 		if (move[strlen(move)-1]=='\n') move[strlen(move)-1]=0;
 		
@@ -840,9 +839,9 @@ int main() {
 			fill_all_moves(current_board);
 			print_board(current_board);
 //			printf("\n%d\n\n",current_board->num_moves);
-			print_all_boards(current_board);
+//			print_all_boards(current_board);
 		}
-	}*/
+	}
 	
 	if (current_board->num_moves==0 && in_check(current_board,current_board->white_to_move)) {
 		printf("Checkmate, %s wins!",(current_board->white_to_move ? "black" : "white"));
