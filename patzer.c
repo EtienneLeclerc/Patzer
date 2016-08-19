@@ -29,6 +29,7 @@ void addQueenMoves(chessboard* board_to_check, int piece_position, char white_to
 void addKnightMoves(chessboard* board_to_check, int piece_position, char white_to_move);
 void addPawnMoves(chessboard* board_to_check, int piece_position, char white_to_move);
 void addKingMoves(chessboard* board_to_check, int piece_position, char white_to_move);
+void addCastling(chessboard* board_to_check, char white_to_move);
 void fill_all_moves(chessboard* board);
 
 //Initializes starting position into /array/.
@@ -757,6 +758,33 @@ void addKingMoves(chessboard* board_to_check, int piece_position, char white_to_
 	}
 }
 
+void addCastling(chessboard* board_to_check, char white_to_move) {
+	if (white_to_move) {
+		if (!strncmp("R...K", board_to_check->board_array+56, 5) && !is_square_threatened(board_to_check,58,0) && !is_square_threatened(board_to_check,59,0) && !is_square_threatened(board_to_check,60,0)) {
+			board_to_check->all_moves[board_to_check->num_moves] = create_board_copy(board_to_check);
+			memcpy(board_to_check->all_moves[board_to_check->num_moves]->board_array+56,"..LS.",5);
+			board_to_check->num_moves++;
+		}
+		if (!strncmp("K..R", board_to_check->board_array+60, 4) && !is_square_threatened(board_to_check,60,0) && !is_square_threatened(board_to_check,61,0) && !is_square_threatened(board_to_check,62,0)) {
+			board_to_check->all_moves[board_to_check->num_moves] = create_board_copy(board_to_check);
+			memcpy(board_to_check->all_moves[board_to_check->num_moves]->board_array+60,".SL.",4);
+			board_to_check->num_moves++;
+		}
+	} else {
+		if (!strncmp("r...k", board_to_check->board_array, 5) && !is_square_threatened(board_to_check,2,1) && !is_square_threatened(board_to_check,3,1) && !is_square_threatened(board_to_check,4,1)) {
+			board_to_check->all_moves[board_to_check->num_moves] = create_board_copy(board_to_check);
+			memcpy(board_to_check->all_moves[board_to_check->num_moves]->board_array,"..ls.",5);
+			board_to_check->num_moves++;
+		}
+		if (!strncmp("k..r", board_to_check->board_array+4, 4) && !is_square_threatened(board_to_check,4,1) && !is_square_threatened(board_to_check,5,1) && !is_square_threatened(board_to_check,6,1)) {
+			board_to_check->all_moves[board_to_check->num_moves] = create_board_copy(board_to_check);
+			memcpy(board_to_check->all_moves[board_to_check->num_moves]->board_array+4,".ls.",4);
+			board_to_check->num_moves++;
+		}
+	}
+}
+
+
 void fill_all_moves(chessboard* board) {
 	if (board->white_to_move) {
 		int i;
@@ -769,6 +797,7 @@ void fill_all_moves(chessboard* board) {
 			else if (board->board_array[i] == 'K' || board->board_array[i] == 'L') addKingMoves(board,i,1);
 			else addPawnMoves(board,i,1);
 		}
+		addCastling(board,1);
 		
 		for (i=0; i<board->num_moves; i++) {
 			if (strstr(board->all_moves[i]->board_array,"o")!=NULL) strstr(board->all_moves[i]->board_array,"o")[0]='m';
@@ -784,6 +813,8 @@ void fill_all_moves(chessboard* board) {
 			else if (board->board_array[i] == 'k' || board->board_array[i] == 'l') addKingMoves(board,i,0);
 			else addPawnMoves(board,i,0);
 		}
+		addCastling(board,0);
+		
 		for (i=0; i<board->num_moves; i++) {
 			if (strstr(board->all_moves[i]->board_array,"O")!=NULL) strstr(board->all_moves[i]->board_array,"O")[0]='M';
 		}
@@ -792,12 +823,14 @@ void fill_all_moves(chessboard* board) {
 
 void init_test_pos(char* array) {
 	int i;
-	for (i=0; i<65; i++) {
+	for (i=0; i<64; i++) {
 		array[i]='.';
 	}
-	array[0]='L';
-	array[2]='r';
-	array[11]='r';
+	array[64]=0;
+	array[56]='R';
+	array[60]='K';
+	array[63]='R';
+	array[3]='r';
 }
 
 int main() {
@@ -815,15 +848,16 @@ int main() {
 	chessboard initial_board;
 	initial_board.white_to_move = 1;
 	char initial_setup[65];
-	init_first_pos(initial_setup);
+//	init_first_pos(initial_setup);
+	init_test_pos(initial_setup);
+
 	initial_board.board_array = initial_setup;
 	initial_board.num_moves = 0;
 	chessboard* all_moves[120];
 	initial_board.all_moves = all_moves;
 	print_board(&initial_board);
 	fill_all_moves(&initial_board);
-
-//	print_all_boards(&initial_board);
+	print_all_boards(&initial_board);
 	
 	chessboard* current_board = &initial_board;
 	char move[7];
