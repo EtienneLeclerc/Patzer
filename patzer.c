@@ -833,6 +833,57 @@ void init_test_pos(char* array) {
 	array[3]='r';
 }
 
+int eval(chessboard* board_to_eval) {
+	int value=0;
+	int i;
+	for (i=0; i<64; i++) {
+		if (board_to_eval->board_array[i] == '.') continue;
+		else if (board_to_eval->board_array[i] == 'M' || board_to_eval->board_array[i] == 'P' || board_to_eval->board_array[i] == 'O') value+=100;
+		else if (board_to_eval->board_array[i] == 'm' || board_to_eval->board_array[i] == 'p' || board_to_eval->board_array[i] == 'o') value-=100;
+		else if (board_to_eval->board_array[i] == 'S' || board_to_eval->board_array[i] == 'R') value+=500;
+		else if (board_to_eval->board_array[i] == 's' || board_to_eval->board_array[i] == 'r') value-=500;
+		else if (board_to_eval->board_array[i] == 'B') value+=330;
+		else if (board_to_eval->board_array[i] == 'b') value-=330;
+		else if (board_to_eval->board_array[i] == 'N') value+=300;
+		else if (board_to_eval->board_array[i] == 'n') value-=300;
+		else if (board_to_eval->board_array[i] == 'Q') value+=900;
+		else if (board_to_eval->board_array[i] == 'q') value-=900;
+		else if (board_to_eval->board_array[i] == 'K') value+=5000;
+		else if (board_to_eval->board_array[i] == 'k') value-=5000;
+	}
+	return value;
+}
+
+chessboard* generate_move(chessboard* board) {
+	fill_all_moves(board);
+	if (board->white_to_move) {
+		int max = -150;
+		int i;
+		chessboard* maxboard=NULL;
+		for (i=0; i<board->num_moves ; i++) {
+			fill_all_moves(board->all_moves[i]);
+//			printf("%d %d\n",board->all_moves[i]->num_moves,eval(board->all_moves[i]));
+			if (eval(board->all_moves[i])>max) {
+				maxboard=board->all_moves[i];
+				max = eval(board->all_moves[i]);
+			}
+		}
+		return maxboard;
+	} else {
+		int max = 150;
+		int i;
+		chessboard* maxboard=NULL;
+		for (i=0; i<board->num_moves ; i++) {
+			fill_all_moves(board->all_moves[i]);
+			if (eval(board->all_moves[i])<max) {
+				maxboard=board->all_moves[i];
+				max = eval(board->all_moves[i]);
+			}
+		}
+		return maxboard;
+	}
+}
+
 int main() {
 	/*
 	initialize. DONE!
@@ -848,8 +899,8 @@ int main() {
 	chessboard initial_board;
 	initial_board.white_to_move = 1;
 	char initial_setup[65];
-//	init_first_pos(initial_setup);
-	init_test_pos(initial_setup);
+	init_first_pos(initial_setup);
+//	init_test_pos(initial_setup);
 
 	initial_board.board_array = initial_setup;
 	initial_board.num_moves = 0;
@@ -857,10 +908,14 @@ int main() {
 	initial_board.all_moves = all_moves;
 	print_board(&initial_board);
 	fill_all_moves(&initial_board);
-	print_all_boards(&initial_board);
+//	print_all_boards(&initial_board);
+	
+	
 	
 	chessboard* current_board = &initial_board;
 	char move[7];
+	
+	print_board(generate_move(current_board));
 	
 	
 	while (current_board->num_moves) {
@@ -874,6 +929,9 @@ int main() {
 			print_board(current_board);
 //			printf("\n%d\n\n",current_board->num_moves);
 //			print_all_boards(current_board);
+			printf("Computer move:\n");
+			current_board=generate_move(current_board);
+			print_board(current_board);
 		}
 	}
 	
