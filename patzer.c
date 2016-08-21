@@ -53,6 +53,34 @@ Syntax: a7-b8=Q, a7-b8, or O-O or O-O-O (not yet implemented)*/
 chessboard* is_legal(chessboard* board, char* move) {
 	char temp[65];
 	strcpy(temp,board->board_array);
+	
+	if(!strncmp("O-O-O", move, 5)) {
+		if (board->white_to_move) {
+			memcpy(temp+56,"..LS.",5);
+		} else {
+			memcpy(temp,"..ls.",5);
+		}
+		int i;
+		for (i=0; i<board->num_moves; i++) {
+			if (!strcmp(board->all_moves[i]->board_array,temp)) return board->all_moves[i];
+		}
+		return NULL;
+	} else if (!strncmp("O-O", move, 3)) {
+		if (board->white_to_move) {
+			memcpy(temp+60,".SL.",4);
+		} else {
+			memcpy(temp+4,".sl.",4);
+		}
+		int i;
+		for (i=0; i<board->num_moves; i++) {
+			if (!strcmp(board->all_moves[i]->board_array,temp)) return board->all_moves[i];
+		}
+		return NULL;
+	} else if (!strncmp("!", move, 1)) {
+		print_all_boards(board);
+		return NULL;
+	}
+
 	int start_square = square_to_digit(move[0],move[1]);
 	int piece_moved = temp[start_square];
 	if ((!islower(piece_moved)&&!board->white_to_move) || (!isupper(piece_moved)&&board->white_to_move)) {
@@ -420,7 +448,7 @@ void addQueenMoves(chessboard* board_to_check, int piece_position, char white_to
 	}
 
 	i=piece_position;
-	while (i<0 && ((i-1)/8)==(i/8) && ((white_to_move && !isupper(board_to_check->board_array[i-1])) || (!white_to_move && !islower(board_to_check->board_array[i-1])))) {
+	while (i>0 && ((i-1)/8)==(i/8) && ((white_to_move && !isupper(board_to_check->board_array[i-1])) || (!white_to_move && !islower(board_to_check->board_array[i-1])))) {
 		i--;
 		if (board_to_check->board_array[i]=='.') {
 			board_to_check->all_moves[board_to_check->num_moves] = create_board_copy(board_to_check);
@@ -842,10 +870,36 @@ void init_test_pos(char* array) {
 		array[i]='.';
 	}
 	array[64]=0;
-	array[56]='R';
-	array[60]='K';
-	array[63]='R';
-	array[3]='r';
+	array[56]='K';
+	array[0]='k';
+	array[61]='Q';
+	array[33]='n';
+}
+
+int pawn_eval(int where, int white_to_move) {
+	if (white_to_move) {
+		int square_table[64] = 
+{ 0,  0,  0,  0,  0,  0,  0,  0,
+50, 50, 50, 50, 50, 50, 50, 50,
+10, 10, 20, 30, 30, 20, 10, 10,
+ 5,  5, 10, 25, 25, 10,  5,  5,
+ 0,  0,  0, 20, 20,  0,  0,  0,
+ 5, -5,-10,  0,  0,-10, -5,  5,
+ 5, 10, 10,-20,-20, 10, 10,  5,
+ 0,  0,  0,  0,  0,  0,  0,  0};
+	return square_table[where];
+	}  else {
+	int square_table[64] = 
+{ 0,  0,  0,  0,  0,  0,  0,  0,
+-5,-10,-10,20,20,-10,-10,-5,
+-5,5,10,0,0,10,5,-5,
+0,0,0,-20,-20,0,0,0,
+-5,-5,-10,-25,-25,-10,-5,-5,
+-10,-10,-20,-30,-30,-20,-10,-10,
+-50,-50,-50,-50,-50,-50,-50,-50,
+0,  0,  0,  0,  0,  0,  0,  0};
+	return square_table[where];
+	}
 }
 
 int eval(chessboard* board_to_eval) {
@@ -853,8 +907,8 @@ int eval(chessboard* board_to_eval) {
 	int i;
 	for (i=0; i<64; i++) {
 		if (board_to_eval->board_array[i] == '.') continue;
-		else if (board_to_eval->board_array[i] == 'M' || board_to_eval->board_array[i] == 'P' || board_to_eval->board_array[i] == 'O') value+=100;
-		else if (board_to_eval->board_array[i] == 'm' || board_to_eval->board_array[i] == 'p' || board_to_eval->board_array[i] == 'o') value-=100;
+		else if (board_to_eval->board_array[i] == 'M' || board_to_eval->board_array[i] == 'P' || board_to_eval->board_array[i] == 'O') value+=100+pawn_eval(i,1);
+		else if (board_to_eval->board_array[i] == 'm' || board_to_eval->board_array[i] == 'p' || board_to_eval->board_array[i] == 'o') value-=100/*+pawn_eval(i,0)*/;
 		else if (board_to_eval->board_array[i] == 'S' || board_to_eval->board_array[i] == 'R') value+=500;
 		else if (board_to_eval->board_array[i] == 's' || board_to_eval->board_array[i] == 'r') value-=500;
 		else if (board_to_eval->board_array[i] == 'B') value+=330;
@@ -956,8 +1010,8 @@ int main() {
 	chessboard initial_board;
 	initial_board.white_to_move = 1;
 	char initial_setup[65];
-	init_first_pos(initial_setup);
-//	init_test_pos(initial_setup);
+//	init_first_pos(initial_setup);
+	init_test_pos(initial_setup);
 
 	initial_board.board_array = initial_setup;
 	initial_board.num_moves = 0;
@@ -967,7 +1021,7 @@ int main() {
 	fill_all_moves(&initial_board);
 //	print_all_boards(&initial_board);
 	
-				printf("%d\n",total);
+//				printf("%d\n",total);
 
 	
 	chessboard* current_board = &initial_board;
@@ -990,7 +1044,7 @@ int main() {
 			fill_all_moves(current_board);
 			print_board(current_board);
 //			print_all_boards(current_board);
-			printf("%d\n",total);
+//			printf("%d\n",total);
 		}
 	}
 	
