@@ -3,6 +3,9 @@
 #include <ctype.h>
 #include <string.h>
 
+int total=0;
+#define freetotal (total--,free)
+#define malloctotal (total++,malloc)
 
 typedef struct chessboard chessboard;
 struct chessboard {
@@ -31,6 +34,9 @@ void addPawnMoves(chessboard* board_to_check, int piece_position, char white_to_
 void addKingMoves(chessboard* board_to_check, int piece_position, char white_to_move);
 void addCastling(chessboard* board_to_check, char white_to_move);
 void fill_all_moves(chessboard* board);
+int maxi(chessboard* board, int depth);
+int mini(chessboard* board, int depth);
+
 
 //Initializes starting position into /array/.
 void init_first_pos(char* array) {
@@ -106,9 +112,9 @@ void print_all_boards(chessboard* board) {
 }
 
 void delete_board(chessboard* board) {
-	free(board->all_moves);
-	free(board->board_array);
-	free(board);
+	freetotal(board->all_moves);
+	freetotal(board->board_array);
+	freetotal(board);
 }
 
 //returns 1 if square threatened by color threatened_by
@@ -180,7 +186,7 @@ int in_check(chessboard* board_to_check, int white_in_check) {
 	return is_square_threatened(board_to_check,king_pos,!white_in_check);
 }	
 
-// Returns 1 if !board_to_check->white_to_move is not in check, returns 0 and frees/destroys board otherwise
+// Returns 1 if !board_to_check->white_to_move is not in check, returns 0 and freetotals/destroys board otherwise
 int delete_if_in_check(chessboard* board_to_check) {
 	int king_pos;
 	for (king_pos=0; king_pos<65; king_pos++) {
@@ -199,13 +205,13 @@ int delete_if_in_check(chessboard* board_to_check) {
 
 /* Creates board copy, but with white_to_move reversed */
 chessboard* create_board_copy(chessboard* board_to_copy) {
-	char* temp_array = malloc(65*sizeof(char));
+	char* temp_array = malloctotal(65*sizeof(char));
 	strcpy(temp_array,board_to_copy->board_array);
-	chessboard* temp_board = malloc(sizeof(chessboard));
+	chessboard* temp_board = malloctotal(sizeof(chessboard));
 	temp_board->num_moves = 0;
 	temp_board->white_to_move = !board_to_copy->white_to_move;
 	temp_board->board_array = temp_array;
-	chessboard** temp_all_moves = malloc(sizeof(chessboard*)*120);
+	chessboard** temp_all_moves = malloctotal(sizeof(chessboard*)*120);
 	temp_board->all_moves = temp_all_moves;
 	temp_board->is_in_check = 0;
 	
@@ -821,6 +827,15 @@ void fill_all_moves(chessboard* board) {
 	}
 }
 
+void delete_all_moves(chessboard* board) {
+	int num_moves = board->num_moves;
+	int i;
+	for (i=0; i<num_moves; i++) {
+		delete_board(board->all_moves[i]);
+	}
+	board->num_moves=0;
+}
+
 void init_test_pos(char* array) {
 	int i;
 	for (i=0; i<64; i++) {
@@ -854,33 +869,75 @@ int eval(chessboard* board_to_eval) {
 	return value;
 }
 
-chessboard* generate_move(chessboard* board) {
+int maxi(chessboard* board, int depth) {
+//		printf("%d %d   ", depth,eval(board));
+
+	if (depth==0) {
+		return eval(board);
+	}
+	int max = -30000;
+	int i;
+	for (i=0; i<board->num_moves ; i++) {
+		fill_all_moves(board->all_moves[i]);
+		int value = mini(board->all_moves[i],depth-1);
+		if (value>max) {
+			max=value;
+		}
+		delete_all_moves(board->all_moves[i]);
+	}
+	return max;
+}
+
+int mini(chessboard* board, int depth) {
+//		printf("%d %d   ", depth,eval(board));
+
+	if (depth==0) {
+		return eval(board);
+	}
+	int min = 30000;
+	int i;
+	for (i=0; i<board->num_moves ; i++) {
+		fill_all_moves(board->all_moves[i]);
+		int value = maxi(board->all_moves[i],depth-1);
+		if (value<min) {
+			min=value;
+		}
+		delete_all_moves(board->all_moves[i]);
+	}
+	return min;
+}
+
+chessboard* generate_move(chessboard* board, int depth) {
 	fill_all_moves(board);
 	if (board->white_to_move) {
-		int max = -150;
+		int max = -30000;
 		int i;
 		chessboard* maxboard=NULL;
 		for (i=0; i<board->num_moves ; i++) {
 			fill_all_moves(board->all_moves[i]);
 //			printf("%d %d\n",board->all_moves[i]->num_moves,eval(board->all_moves[i]));
-			if (eval(board->all_moves[i])>max) {
+			int value=mini(board->all_moves[i],depth-1);
+			if (value>max) {
 				maxboard=board->all_moves[i];
-				max = eval(board->all_moves[i]);
+				max = value;
 			}
+			delete_all_moves(board->all_moves[i]);
 		}
 		return maxboard;
 	} else {
-		int max = 150;
+		int min = 30000;
 		int i;
-		chessboard* maxboard=NULL;
+		chessboard* minboard=NULL;
 		for (i=0; i<board->num_moves ; i++) {
 			fill_all_moves(board->all_moves[i]);
-			if (eval(board->all_moves[i])<max) {
-				maxboard=board->all_moves[i];
-				max = eval(board->all_moves[i]);
+			int value=maxi(board->all_moves[i],depth-1);
+			if (value<min) {
+				minboard=board->all_moves[i];
+				min = value;
 			}
+			delete_all_moves(board->all_moves[i]);
 		}
-		return maxboard;
+		return minboard;
 	}
 }
 
@@ -910,13 +967,11 @@ int main() {
 	fill_all_moves(&initial_board);
 //	print_all_boards(&initial_board);
 	
-	
+				printf("%d\n",total);
+
 	
 	chessboard* current_board = &initial_board;
-	char move[7];
-	
-	print_board(generate_move(current_board));
-	
+	char move[7];	
 	
 	while (current_board->num_moves) {
 		fgets(move,7,stdin);
@@ -927,11 +982,15 @@ int main() {
 //			printf("%d",current_board->white_to_move);
 			fill_all_moves(current_board);
 			print_board(current_board);
+			if (!current_board->num_moves) break;
 //			printf("\n%d\n\n",current_board->num_moves);
 //			print_all_boards(current_board);
 			printf("Computer move:\n");
-			current_board=generate_move(current_board);
+			current_board=generate_move(current_board,3);
+			fill_all_moves(current_board);
 			print_board(current_board);
+//			print_all_boards(current_board);
+			printf("%d\n",total);
 		}
 	}
 	
